@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💊 智能药品管家</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 引入字体图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-pills"></i>
+                <span>智能药品管家</span>
+            </div>
+            <div class="nav-stats">
+                <div class="stat-item">
+                    <i class="fas fa-box"></i>
+                    <span id="totalCount">0</span>
+                    <small>总药品</small>
+                </div>
+                <div class="stat-item warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="warningCount">0</span>
+                    <small>预警</small>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 快速统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <div class="stat-icon">
+                    <i class="fas fa-capsules"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="totalMedicines">0</h3>
+                    <p>药品总数</p>
+                </div>
+            </div>
+            <div class="stat-card orange">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="expiringSoon">0</h3>
+                    <p>即将过期</p>
+                </div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="expired">0</h3>
+                    <p>已过期</p>
+                </div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="healthy">0</h3>
+                    <p>状态良好</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 警告提醒区域 -->
+        <div id="alertsContainer" class="alerts-container"></div>
+
+        <!-- 添加药品卡片 -->
+        <div class="card add-medicine-card">
+            <div class="card-header">
+                <h2><i class="fas fa-plus-circle"></i> 添加新药品</h2>
+                <button id="toggleForm" class="btn-toggle">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="card-body" id="addForm">
+                <form id="medicineForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label><i class="fas fa-pills"></i> 药品名称 *</label>
+                            <input type="text" id="name" placeholder="请输入药品名称" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-industry"></i> 品牌厂商</label>
+                            <input type="text" id="brand" placeholder="请输入品牌或厂商">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-boxes"></i> 库存数量 *</label>
+                            <input type="number" id="stock" placeholder="0" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar-times"></i> 过期时间 *</label>
+                            <input type="date" id="expiry" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar-check"></i> 开封时间</label>
+                            <input type="date" id="opened">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-image"></i> 药品图片</label>
+                            <div class="file-upload">
+                                <input type="file" id="image" accept="image/*">
+                                <div class="file-upload-text">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>点击选择图片</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> 添加药品
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> 重置表单
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 搜索和筛选 -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-search"></i> 搜索筛选</h2>
+            </div>
+            <div class="card-body">
+                <div class="search-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="搜索药品名称或品牌...">
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">
+                            <i class="fas fa-list"></i> 全部
+                        </button>
+                        <button class="filter-btn" data-filter="expiring">
+                            <i class="fas fa-exclamation-triangle"></i> 即将过期
+                        </button>
+                        <button class="filter-btn" data-filter="expired">
+                            <i class="fas fa-times-circle"></i> 已过期
+                        </button>
+                        <button class="filter-btn" data-filter="healthy">
+                            <i class="fas fa-check-circle"></i> 状态良好
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 药品列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-list"></i> 药品列表</h2>
+                <div class="view-options">
+                    <button id="gridView" class="view-btn active">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button id="listView" class="view-btn">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="medicineContainer" class="medicine-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> 编辑药品</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div class="form-group">
+                        <label>库存数量</label>
+                        <input type="number" id="editStock" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>开封时间</label>
+                        <input type="date" id="editOpened">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="saveEdit()">
+                    <i class="fas fa-save"></i> 保存
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
