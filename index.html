@@ -4,8 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>💊 智能药品管家</title>
+    
+    <!-- PWA支持 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="药品管家">
+    
+    <!-- 网站图标 -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2NjdFRUEiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iNzYiIHJ4PSI0MCIgcnk9IjMyIiBmaWxsPSJ3aGl0ZSIvPgo8cmVjdCB4PSI0OCIgeT0iMTA0IiB3aWR0aD0iOTYiIGhlaWdodD0iNDgiIHJ4PSI4IiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI5NiIgeT0iMTc2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7oj5Dkvb/nrqHnkIY8L3RleHQ+Cjwvc3ZnPg==">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2NjdFRUEiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iNzYiIHJ4PSI0MCIgcnk9IjMyIiBmaWxsPSJ3aGl0ZSIvPgo8cmVjdCB4PSI0OCIgeT0iMTA0IiB3aWR0aD0iOTYiIGhlaWdodD0iNDgiIHJ4PSI4IiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI5NiIgeT0iMTc2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7oj5Dkvb/nrqHnkIY8L3RleHQ+Cjwvc3ZnPg==">
+    
+    <!-- 样式文件 -->
     <link rel="stylesheet" href="style.css">
-    <!-- 引入字体图标 -->
+    <!-- 字体图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -74,6 +87,19 @@
 
         <!-- 警告提醒区域 -->
         <div id="alertsContainer" class="alerts-container"></div>
+
+        <!-- PWA安装提示 -->
+        <div id="installPrompt" class="install-prompt" style="display: none;">
+            <div class="install-content">
+                <i class="fas fa-download"></i>
+                <div>
+                    <h4>安装到桌面</h4>
+                    <p>安装后可以像APP一样使用，支持离线访问</p>
+                </div>
+                <button id="installBtn" class="btn btn-primary btn-small">安装</button>
+                <button id="dismissBtn" class="btn btn-secondary btn-small">忽略</button>
+            </div>
+        </div>
 
         <!-- 添加药品卡片 -->
         <div class="card add-medicine-card">
@@ -206,6 +232,12 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- 离线提示 -->
+    <div id="offlineNotification" class="offline-notification" style="display: none;">
+        <i class="fas fa-wifi"></i>
+        <span>当前离线模式，数据已保存到本地</span>
     </div>
 
     <script src="script.js"></script>

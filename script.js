@@ -2,11 +2,14 @@
 let medicines = JSON.parse(localStorage.getItem('medicines')) || [];
 let currentFilter = 'all';
 let currentView = 'grid';
+let deferredPrompt = null;
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
+    registerServiceWorker();
+    setupPWA();
 });
 
 // 初始化应用
@@ -15,6 +18,34 @@ function initializeApp() {
     displayMedicines();
     showAlerts();
     updateNavStats();
+    checkURLAction();
+}
+
+// 检查URL参数执行相应动作
+function checkURLAction() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action');
+    const filter = urlParams.get('filter');
+    
+    if (action === 'add') {
+        // 自动展开添加表单
+        const addForm = document.getElementById('addForm');
+        const toggleBtn = document.getElementById('toggleForm');
+        addForm.classList.remove('collapsed');
+        toggleBtn.classList.remove('rotated');
+    }
+    
+    if (filter && ['expiring', 'expired', 'healthy'].includes(filter)) {
+        // 设置筛选状态
+        currentFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.filter === filter) {
+                btn.classList.add('active');
+            }
+        });
+        displayMedicines();
+    }
 }
 
 // 设置事件监听器
@@ -49,6 +80,117 @@ function setupEventListeners() {
     document.getElementById('editModal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });
+    
+    // 离线状态检测
+    window.addEventListener('online', () => {
+        hideOfflineNotification();
+        showNotification('网络已连接', 'success');
+    });
+    
+    window.addEventListener('offline', () => {
+        showOfflineNotification();
+        showNotification('当前处于离线状态', 'warning');
+    });
+}
+
+// 注册Service Worker
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('./sw.js')
+                .then(function(registration) {
+                    console.log('SW registered: ', registration);
+                    
+                    // 检查更新
+                    registration.addEventListener('updatefound', function() {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', function() {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                showNotification('发现新版本，请刷新页面', 'info');
+                            }
+                        });
+                    });
+                })
+                .catch(function(registrationError) {
+                    console.log('SW registration failed: ', registrationError);
+                });
+        });
+    }
+}
+
+// 设置PWA功能
+function setupPWA() {
+    // 监听安装提示
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showInstallPrompt();
+    });
+    
+    // 监听安装完成
+    window.addEventListener('appinstalled', () => {
+        hideInstallPrompt();
+        showNotification('应用安装成功！', 'success');
+        deferredPrompt = null;
+    });
+    
+    // 设置安装按钮事件
+    const installBtn = document.getElementById('installBtn');
+    const dismissBtn = document.getElementById('dismissBtn');
+    
+    if (installBtn) {
+        installBtn.addEventListener('click', installApp);
+    }
+    
+    if (dismissBtn) {
+        dismissBtn.addEventListener('click', hideInstallPrompt);
+    }
+}
+
+// 显示安装提示
+function showInstallPrompt() {
+    const prompt = document.getElementById('installPrompt');
+    if (prompt) {
+        prompt.style.display = 'block';
+    }
+}
+
+// 隐藏安装提示
+function hideInstallPrompt() {
+    const prompt = document.getElementById('installPrompt');
+    if (prompt) {
+        prompt.style.display = 'none';
+    }
+}
+
+// 安装应用
+function installApp() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('用户安装了PWA');
+            }
+            deferredPrompt = null;
+            hideInstallPrompt();
+        });
+    }
+}
+
+// 显示离线通知
+function showOfflineNotification() {
+    const notification = document.getElementById('offlineNotification');
+    if (notification) {
+        notification.style.display = 'flex';
+    }
+}
+
+// 隐藏离线通知
+function hideOfflineNotification() {
+    const notification = document.getElementById('offlineNotification');
+    if (notification) {
+        notification.style.display = 'none';
+    }
 }
 
 // 添加药品功能（增强版）
@@ -60,8 +202,8 @@ function addMedicine(e) {
     
     const medicine = {
         id: Date.now(),
-        name: formData.get('name') || document.getElementById('name').value,
-        brand: formData.get('brand') || document.getElementById('brand').value || '未知品牌',
+        name: document.getElementById('name').value,
+        brand: document.getElementById('brand').value || '未知品牌',
         stock: parseInt(document.getElementById('stock').value),
         expiry: document.getElementById('expiry').value,
         opened: document.getElementById('opened').value || null,
@@ -71,6 +213,12 @@ function addMedicine(e) {
     
     // 处理图片上传
     if (imageFile) {
+        // 检查文件大小（限制5MB）
+        if (imageFile.size > 5 * 1024 * 1024) {
+            showNotification('图片文件过大，请选择小于5MB的图片', 'error');
+            return;
+        }
+        
         const reader = new FileReader();
         reader.onload = function(e) {
             medicine.image = e.target.result;
@@ -94,7 +242,12 @@ function saveMedicine(medicine) {
     initializeApp();
     
     // 显示成功提示
-    showNotification('药品添加成功！', 'success');
+    showNotification(`${medicine.name} 添加成功！`, 'success');
+    
+    // 如果是通过快捷方式进入的，清除URL参数
+    if (window.location.search.includes('action=add')) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 }
 
 // 显示药品列表（增强版）
@@ -103,11 +256,15 @@ function displayMedicines() {
     let filteredMedicines = filterMedicines();
     
     if (filteredMedicines.length === 0) {
+        const filterText = currentFilter === 'all' ? '药品' : 
+                          currentFilter === 'expired' ? '已过期的药品' :
+                          currentFilter === 'expiring' ? '即将过期的药品' : '状态良好的药品';
+        
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-pills"></i>
-                <h3>暂无药品</h3>
-                <p>开始添加您的第一个药品吧！</p>
+                <h3>暂无${filterText}</h3>
+                <p>${currentFilter === 'all' ? '开始添加您的第一个药品吧！' : '请尝试其他筛选条件'}</p>
             </div>
         `;
         return;
@@ -269,6 +426,10 @@ function showAlerts() {
                 <div>
                     <strong>已过期提醒：</strong>
                     有 ${expiredMedicines.length} 种药品已过期，请及时处理！
+                    <small style="display: block; margin-top: 5px;">
+                        ${expiredMedicines.slice(0, 3).map(m => m.name).join('、')}
+                        ${expiredMedicines.length > 3 ? '等' : ''}
+                    </small>
                 </div>
             </div>
         `;
@@ -281,6 +442,10 @@ function showAlerts() {
                 <div>
                     <strong>即将过期提醒：</strong>
                     有 ${expiringMedicines.length} 种药品将在7天内过期！
+                    <small style="display: block; margin-top: 5px;">
+                        ${expiringMedicines.slice(0, 3).map(m => m.name).join('、')}
+                        ${expiringMedicines.length > 3 ? '等' : ''}
+                    </small>
                 </div>
             </div>
         `;
@@ -359,7 +524,7 @@ function saveEdit() {
         localStorage.setItem('medicines', JSON.stringify(medicines));
         initializeApp();
         closeModal();
-        showNotification('修改成功！', 'success');
+        showNotification(`${medicine.name} 修改成功！`, 'success');
     }
 }
 
@@ -388,7 +553,7 @@ function deleteMedicine(id) {
         medicines = medicines.filter(m => m.id !== id);
         localStorage.setItem('medicines', JSON.stringify(medicines));
         initializeApp();
-        showNotification('删除成功！', 'success');
+        showNotification(`${medicine.name} 删除成功！`, 'success');
     }
 }
 
@@ -415,7 +580,7 @@ function formatDate(dateString) {
 
 // 获取默认图片
 function getDefaultImage() {
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjhGOUZBIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzY2N0VFQSIvPgo8cGF0aCBkPSJNODUgMTAwSDE1NUMxNjAuNTIzIDEwMCAxNjUgMTA0LjQ3NyAxNjUgMTEwVjE0MEMxNjUgMTQ1LjUyMyAxNjAuNTIzIDE1MCAxNTUgMTUwSDQ1QzM5LjQ3NzIgMTUwIDM1IDE0NS41MjMgMzUgMTQwVjExMEMzNSAxMDQuNDc3IDM5LjQ3NzIgMTAwIDQ1IDEwMEg4NVoiIGZpbGw9IiM2NjdFRUEiLz4KPHRleHQgeD0iMTAwIiB5PSIxNzAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlDQTNBRiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+6I2v5ZOB5Zu+54mHPC90ZXh0Pgo8L3N2Zz4=';
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjhGOUZBIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzY2N0VFQSIvPgo8cGF0aCBkPSJNODUgMTAwSDE1NUMxNjAuNTIzIDEwMCAxNjUgMTA0LjQ3NyAxNjUgMTEwVjE0MEMxNjUgMTQ1LjUyMyAxNjAuNTIzIDE1MCAxNTUgMTUwSDQ1QzM5LjQ3NzIgMTUwIDM1IDE0NS41MjMgMzUgMTQwVjExMEMzNSAxMDQuNDc3IDM5LjQ3NzIgMTAwIDQ1IDEwMEg4NVoiIGZpbGw9IiM2NjdFRUEiLz4KPHR5cGUgeD0iMTAwIiB5PSIxNzAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlDQTNBRiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+6I2v5ZOB5Zu+54mHPC90ZXh0Pgo8L3N2Zz4=';
 }
 
 // 显示通知
@@ -444,6 +609,7 @@ function showNotification(message, type = 'info') {
         gap: 10px;
         min-width: 250px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        max-width: 90vw;
     `;
     
     // 设置背景色
